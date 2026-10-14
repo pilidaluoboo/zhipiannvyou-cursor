@@ -29,8 +29,15 @@ cp .env.example .env.local
 | `ARK_API_KEY` | 火山方舟 API Key |
 | `ARK_SEEDREAM_MODEL` | 图片模型接入点（`ep-m-...`） |
 | `ARK_LLM_MODEL` | 文字模型接入点（`ep-m-...`） |
+| `R2_ACCOUNT_ID` | Cloudflare 账户 ID |
+| `R2_ACCESS_KEY_ID` | R2 API Token Access Key |
+| `R2_SECRET_ACCESS_KEY` | R2 API Token Secret Key |
+| `R2_BUCKET_NAME` | 私有 Bucket 名称 |
+| `R2_ENDPOINT` | 可选，默认 `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
+| `CHAT_STORE_URL` | D1 聊天存储 Worker 地址 |
+| `CHAT_STORE_SECRET` | 与 Worker 共享的访问密钥 |
 
-接入点在 [火山方舟控制台 → 在线推理](https://console.volcengine.com/ark) 中复制。
+接入点在 [火山方舟控制台 → 在线推理](https://console.volcengine.com/ark) 中复制。AI 生成图片会转存到私有 R2，经 `/api/media/...` 访问。聊天记录存 Cloudflare D1，靠本机匿名设备 ID 关联（同一浏览器刷新可恢复）。
 
 ### 启动
 

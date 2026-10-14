@@ -11,6 +11,11 @@ import {
   getIntimacyLevel,
   getIntimacyModifier,
 } from "@/lib/chat-session";
+import { getOrCreateDeviceId } from "@/lib/device-id";
+import {
+  loadChatSession,
+  saveChatSession,
+} from "@/lib/chat-store-client";
 
 // ===== Sub-components =====
 
@@ -229,6 +234,8 @@ export default function ChatPage() {
   const girlfriend = getGirlfriend(girlfriendId);
 
   const [session, setSession] = useState<ChatSession | null>(null);
+  const [deviceId, setDeviceId] = useState("");
+  const [sessionReady, setSessionReady] = useState(false);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
@@ -240,16 +247,69 @@ export default function ChatPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize session
+  // 从 D1 恢复会话；失败则新建
   useEffect(() => {
-    if (girlfriend) {
-      const newSession = createSession(girlfriend);
-      // Use pre-generated static avatar
-      newSession.avatarUrl = girlfriend.avatarUrl;
-      setSession(newSession);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [girlfriendId]);
+    if (!girlfriend) return;
+
+    let cancelled = false;
+    setSessionReady(false);
+    setSession(null);
+
+    const boot = async () => {
+      const id = getOrCreateDeviceId();
+      if (cancelled) return;
+      setDeviceId(id);
+
+      const fresh = () => {
+        const created = createSession(girlfriend);
+        created.avatarUrl = girlfriend.avatarUrl;
+        return created;
+      };
+
+      try {
+        const saved = await loadChatSession({
+          deviceId: id,
+          girlfriendId: girlfriend.id,
+        });
+        if (cancelled) return;
+        if (saved && Array.isArray(saved.messages) && saved.messages.length > 0) {
+          setSession({
+            ...saved,
+            girlfriendId: girlfriend.id,
+            avatarUrl: girlfriend.avatarUrl,
+          });
+        } else {
+          setSession(fresh());
+        }
+      } catch {
+        if (!cancelled) setSession(fresh());
+      } finally {
+        if (!cancelled) setSessionReady(true);
+      }
+    };
+
+    void boot();
+    return () => {
+      cancelled = true;
+    };
+  }, [girlfriendId, girlfriend]);
+
+  // 会话变更后防抖写入 D1
+  useEffect(() => {
+    if (!sessionReady || !session || !deviceId || !girlfriend) return;
+
+    const timer = window.setTimeout(() => {
+      void saveChatSession({
+        deviceId,
+        girlfriendId: girlfriend.id,
+        session,
+      }).catch(() => {
+        // 保存失败静默忽略，避免打断聊天
+      });
+    }, 600);
+
+    return () => window.clearTimeout(timer);
+  }, [session, sessionReady, deviceId, girlfriend]);
 
   // Auto-scroll
   useEffect(() => {
@@ -340,7 +400,7 @@ export default function ChatPage() {
         });
         const data = await res.json();
 
-        if (data.imageUrl) {
+        if (res.ok && data.imageUrl) {
           const imageMsg: ChatMessage = {
             id: crypto.randomUUID(),
             role: "girlfriend",
@@ -366,13 +426,17 @@ export default function ChatPage() {
           });
           generateTTS("给你看看我～", imageMsg.id, true);
         } else {
+          const failHint =
+            typeof data.error === "string" && data.error.includes("保存")
+              ? "📸 图片保存失败，稍后再试"
+              : "📸 自拍生成失败，稍后再试";
           setSession((prev) => {
             if (!prev) return prev;
             return {
               ...prev,
               messages: prev.messages.map((m) =>
                 m.id === systemMsg.id
-                  ? { ...m, content: "📸 自拍生成失败，稍后再试" }
+                  ? { ...m, content: failHint }
                   : m
               ),
             };
@@ -593,6 +657,14 @@ export default function ChatPage() {
             返回首页
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (!sessionReady || !session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#EDE7E0]">
+        <p className="text-gray-500 text-sm">正在加载聊天记录...</p>
       </div>
     );
   }

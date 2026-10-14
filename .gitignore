@@ -160,3 +160,6 @@ Desktop.ini
 .coze-logs
 .preview
 .codegraph
+.env
+.env.*
+!.env.example

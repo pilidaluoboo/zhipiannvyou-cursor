@@ -1,0 +1,10 @@
+name = "zhipiannvyou-chat-store"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "zhipiannvyou-chat"
+database_id = "2b8b9fe4-1e3c-4092-a4bf-54c3892f0ffb"
+
+# 部署后执行: wrangler secret put CHAT_STORE_SECRET

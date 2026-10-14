@@ -17,6 +17,8 @@ export interface ChatSession {
   messageCount: number;
   lastSelfieAt: number;
   avatarUrl?: string;
+  /** 上次定时早安/问候写入时间（防同一天重复） */
+  lastMorningGreetingAt?: number;
 }
 
 export function createSession(girlfriend: Girlfriend): ChatSession {

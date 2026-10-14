@@ -3,6 +3,7 @@ import {
   generateArkImage,
   resolveReferenceImage,
 } from "@/lib/ark-seedream";
+import { persistGeneratedImage } from "@/lib/r2";
 
 export const maxDuration = 60;
 
@@ -25,9 +26,15 @@ export async function POST(request: NextRequest) {
       watermark: false,
     });
 
+    const imageUrl = await persistGeneratedImage({
+      sourceUrl: result.imageUrl,
+      kind: "avatars",
+      folderHint: "generated",
+    });
+
     return NextResponse.json({
-      imageUrl: result.imageUrl,
-      imageUrls: result.imageUrls,
+      imageUrl,
+      imageUrls: [imageUrl],
     });
   } catch (error) {
     const message =

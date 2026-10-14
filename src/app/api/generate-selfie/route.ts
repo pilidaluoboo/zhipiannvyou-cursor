@@ -3,6 +3,7 @@ import {
   generateArkImage,
   resolveReferenceImage,
 } from "@/lib/ark-seedream";
+import { persistGeneratedImage } from "@/lib/r2";
 
 export const maxDuration = 60;
 
@@ -25,9 +26,13 @@ export async function POST(request: NextRequest) {
       watermark: false,
     });
 
-    return NextResponse.json({
-      imageUrl: result.imageUrl,
+    const imageUrl = await persistGeneratedImage({
+      sourceUrl: result.imageUrl,
+      kind: "selfies",
+      folderHint: "chat",
     });
+
+    return NextResponse.json({ imageUrl });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "自拍生成失败";

@@ -2,6 +2,7 @@ import { setDefaultResultOrder } from "dns";
 import { readFile } from "fs/promises";
 import path from "path";
 import { formatFetchError } from "@/lib/ark-errors";
+import { arkRequestHeaders } from "@/lib/ark-fetch";
 
 try {
   setDefaultResultOrder("ipv4first");
@@ -111,10 +112,7 @@ export async function generateArkImage(
   try {
     response = await fetch(`${baseUrl}/images/generations`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers: arkRequestHeaders(apiKey),
       body: JSON.stringify(body),
     });
   } catch (error) {

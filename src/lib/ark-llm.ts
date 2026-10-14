@@ -1,5 +1,6 @@
 import { setDefaultResultOrder } from "dns";
 import { formatFetchError } from "@/lib/ark-errors";
+import { arkRequestHeaders } from "@/lib/ark-fetch";
 
 // 部分云厂商 IPv6 解析会导致访问国内方舟失败
 try {
@@ -33,6 +34,18 @@ function getArkConfig() {
   return { apiKey, model, baseUrl };
 }
 
+/** 非流式一次性拿完整回复（定时任务等场景） */
+export async function invokeArkChat(options: {
+  messages: ArkChatMessage[];
+  temperature?: number;
+}): Promise<string> {
+  let text = "";
+  for await (const chunk of streamArkChat(options)) {
+    text += chunk;
+  }
+  return text.trim();
+}
+
 /**
  * 火山方舟 Chat Completions 流式输出（OpenAI 兼容）
  * 产出每个增量文本片段
@@ -47,10 +60,7 @@ export async function* streamArkChat(options: {
   try {
     response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers: arkRequestHeaders(apiKey),
       body: JSON.stringify({
         model,
         messages: options.messages,
