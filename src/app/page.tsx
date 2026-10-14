@@ -7,10 +7,45 @@ import { useState, useCallback } from "react";
 export default function HomePage() {
   const router = useRouter();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [welcomeEmail, setWelcomeEmail] = useState("");
+  const [welcomeStatus, setWelcomeStatus] = useState<
+    "idle" | "loading" | "ok" | "error"
+  >("idle");
+  const [welcomeMessage, setWelcomeMessage] = useState("");
 
   const handleStartChat = useCallback((gfId: string) => {
     router.push(`/chat/${gfId}`);
   }, [router]);
+
+  const handleSendWelcome = useCallback(async () => {
+    const email = welcomeEmail.trim();
+    if (!email) {
+      setWelcomeStatus("error");
+      setWelcomeMessage("请先填写邮箱");
+      return;
+    }
+
+    setWelcomeStatus("loading");
+    setWelcomeMessage("");
+    try {
+      const res = await fetch("/api/email/welcome", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setWelcomeStatus("error");
+        setWelcomeMessage(data.error || "发送失败");
+        return;
+      }
+      setWelcomeStatus("ok");
+      setWelcomeMessage("欢迎邮件已发送，请查收邮箱（含垃圾箱）");
+    } catch {
+      setWelcomeStatus("error");
+      setWelcomeMessage("网络错误，请稍后重试");
+    }
+  }, [welcomeEmail]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-amber-50 to-purple-50 flex flex-col items-center justify-center p-4">
@@ -89,6 +124,40 @@ export default function HomePage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* 欢迎邮件测试（写死模板） */}
+      <div className="mt-10 w-full max-w-md rounded-2xl bg-white/70 backdrop-blur-sm border border-white/80 p-4 shadow-sm">
+        <p className="text-sm font-medium text-gray-700 mb-1">测试欢迎邮件</p>
+        <p className="text-xs text-gray-500 mb-3">
+          输入你的邮箱，发送一封写死模板的雅琪欢迎信（仅测试）
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="email"
+            value={welcomeEmail}
+            onChange={(e) => setWelcomeEmail(e.target.value)}
+            placeholder="your@email.com"
+            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-rose-300"
+          />
+          <button
+            type="button"
+            onClick={handleSendWelcome}
+            disabled={welcomeStatus === "loading"}
+            className="rounded-lg bg-gray-800 px-3 py-2 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
+          >
+            {welcomeStatus === "loading" ? "发送中…" : "发送"}
+          </button>
+        </div>
+        {welcomeMessage ? (
+          <p
+            className={`mt-2 text-xs ${
+              welcomeStatus === "ok" ? "text-emerald-600" : "text-rose-600"
+            }`}
+          >
+            {welcomeMessage}
+          </p>
+        ) : null}
       </div>
 
       {/* Footer */}
