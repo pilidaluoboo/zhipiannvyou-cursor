@@ -113,6 +113,9 @@ importers:
       coze-coding-dev-sdk:
         specifier: ^0.7.23
         version: 0.7.32(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.4)(openai@7.32.0(@aws-sdk/credential-provider-node@3.972.86)(@smithy/signature-v4@5.7.4)(undici@7.30.0)(ws@8.22.0)(zod@4.6.7))(undici@7.30.0)(ws@8.22.0)
+      crisp-sdk-web:
+        specifier: ^1.2.1
+        version: 1.2.1
       date-fns:
         specifier: ^4.1.0
         version: 4.4.0
@@ -3137,6 +3140,9 @@ packages:
     resolution: {integrity: sha512-msyVSaZXcnW/dK7qaREeOqjj/kZtQSe7cH/OXhDf+/zjIvrUleRsSQrRFkIkwyuuze9oIEFBo0CC+/7x6YZpQA==}
     engines: {node: '>=18.0.0'}
     hasBin: true
+
+  crisp-sdk-web@1.2.1:
+    resolution: {integrity: sha512-tp62o82QktRiaGqFQLuRNRwndN/+VIY/mOQVeKnA2nKHn9wTFAzdRXTT5pBbxgLKcvT5uryfd9eL/u7s1N7yEA==}
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -8584,6 +8590,8 @@ snapshots:
       - undici
       - utf-8-validate
       - ws
+
+  crisp-sdk-web@1.2.1: {}
 
   cross-spawn@7.0.6:
     dependencies:
