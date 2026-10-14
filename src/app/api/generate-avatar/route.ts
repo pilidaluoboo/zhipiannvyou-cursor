@@ -4,6 +4,8 @@ import {
   resolveReferenceImage,
 } from "@/lib/ark-seedream";
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   const { prompt, referenceImageUrl } = await request.json();
 

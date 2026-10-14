@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { streamArkChat, type ArkChatMessage } from "@/lib/ark-llm";
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   const { messages, systemPrompt, intimacyModifier } = await request.json();
 
