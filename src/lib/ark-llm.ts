@@ -1,3 +1,13 @@
+import { setDefaultResultOrder } from "dns";
+import { formatFetchError } from "@/lib/ark-errors";
+
+// 部分云厂商 IPv6 解析会导致访问国内方舟失败
+try {
+  setDefaultResultOrder("ipv4first");
+} catch {
+  // ignore
+}
+
 export interface ArkChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -33,19 +43,24 @@ export async function* streamArkChat(options: {
 }): AsyncGenerator<string, void, unknown> {
   const { apiKey, model, baseUrl } = getArkConfig();
 
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: options.messages,
-      temperature: options.temperature ?? 0.85,
-      stream: true,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: options.messages,
+        temperature: options.temperature ?? 0.85,
+        stream: true,
+      }),
+    });
+  } catch (error) {
+    throw new Error(formatFetchError("文字模型", error));
+  }
 
   if (!response.ok) {
     const errText = await response.text().catch(() => "");

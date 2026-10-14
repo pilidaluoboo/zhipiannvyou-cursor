@@ -474,23 +474,30 @@ export default function ChatPage() {
 
         for (const line of lines) {
           if (line.startsWith("data: ")) {
+            let data: {
+              error?: string;
+              content?: string;
+              done?: boolean;
+            };
             try {
-              const data = JSON.parse(line.slice(6));
-              if (data.error) {
-                throw new Error(data.error);
-              }
-              if (data.content) {
-                accumulatedContent += data.content;
-                setStreamingContent(accumulatedContent);
-              }
-              if (data.done) {
-                // Stream complete
-              }
+              data = JSON.parse(line.slice(6));
             } catch {
               // Skip invalid JSON
+              continue;
+            }
+            if (data.error) {
+              throw new Error(data.error);
+            }
+            if (data.content) {
+              accumulatedContent += data.content;
+              setStreamingContent(accumulatedContent);
             }
           }
         }
+      }
+
+      if (!accumulatedContent.trim()) {
+        throw new Error("AI 未返回文字内容，请稍后重试");
       }
 
       // Create the final message

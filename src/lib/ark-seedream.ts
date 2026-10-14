@@ -1,5 +1,13 @@
+import { setDefaultResultOrder } from "dns";
 import { readFile } from "fs/promises";
 import path from "path";
+import { formatFetchError } from "@/lib/ark-errors";
+
+try {
+  setDefaultResultOrder("ipv4first");
+} catch {
+  // ignore
+}
 
 export interface ArkImageGenerateOptions {
   prompt: string;
@@ -99,14 +107,19 @@ export async function generateArkImage(
     body.image = options.referenceImage;
   }
 
-  const response = await fetch(`${baseUrl}/images/generations`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/images/generations`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    throw new Error(formatFetchError("图片生成", error));
+  }
 
   const data = (await response.json()) as {
     error?: { message?: string; code?: string };
