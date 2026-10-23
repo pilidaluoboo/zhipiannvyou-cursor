@@ -767,8 +767,8 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area - always enabled */}
-      <div className="bg-white/90 backdrop-blur-sm border-t border-gray-100 px-4 py-3">
+      {/* Input Area - always enabled；相对层级高于页面内容，避免被同层装饰盖住 */}
+      <div className="relative z-20 bg-white/90 backdrop-blur-sm border-t border-gray-100 px-4 py-3">
         <div className="flex items-center gap-2">
           <input
             ref={inputRef}
@@ -780,9 +780,11 @@ export default function ChatPage() {
             className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300 focus:border-transparent transition-all"
           />
           <button
+            type="button"
+            aria-label="发送"
             onClick={sendMessage}
             disabled={!inputText.trim()}
-            className="w-10 h-10 rounded-full bg-[#95EC69] flex items-center justify-center hover:bg-[#7ED94E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="relative z-20 w-10 h-10 shrink-0 rounded-full bg-[#95EC69] flex items-center justify-center hover:bg-[#7ED94E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg className="w-5 h-5 text-gray-700" fill="currentColor" viewBox="0 0 20 20">
               <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
