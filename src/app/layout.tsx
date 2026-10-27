@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inspector } from 'react-dev-inspector';
+import { Analytics } from '@vercel/analytics/next';
 import { CrispChat } from '@/components/crisp-chat';
 import './globals.css';
 
@@ -43,6 +44,7 @@ export default function RootLayout({
         {isDev && <Inspector />}
         {children}
         <CrispChat />
+        <Analytics />
       </body>
     </html>
   );
