@@ -3,6 +3,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { formatFetchError } from "@/lib/ark-errors";
 import { arkRequestHeaders } from "@/lib/ark-fetch";
+import { outboundFetch } from "@/lib/outbound-fetch";
 
 try {
   setDefaultResultOrder("ipv4first");
@@ -110,10 +111,11 @@ export async function generateArkImage(
 
   let response: Response;
   try {
-    response = await fetch(`${baseUrl}/images/generations`, {
+    response = await outboundFetch(`${baseUrl}/images/generations`, {
       method: "POST",
       headers: arkRequestHeaders(apiKey),
       body: JSON.stringify(body),
+      retries: 2,
     });
   } catch (error) {
     throw new Error(formatFetchError("图片生成", error));

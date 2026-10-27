@@ -8,6 +8,11 @@ import {
   type ChatSession,
   createSession,
   shouldTriggerSelfie,
+  isPhotoRequest,
+  isPhotoRealityMetaQuestion,
+  buildSelfiePendingFeatureContext,
+  buildIdentityHonestyFeatureContext,
+  getSelfieFailureCharacterLine,
   getIntimacyLevel,
   getIntimacyModifier,
 } from "@/lib/chat-session";
@@ -16,6 +21,7 @@ import {
   loadChatSession,
   saveChatSession,
 } from "@/lib/chat-store-client";
+import { buildSelfiePrompt } from "@/lib/selfie-prompt";
 
 // ===== Sub-components =====
 
@@ -368,7 +374,10 @@ export default function ChatPage() {
   );
 
   const generateSelfie = useCallback(
-    async (currentSession: ChatSession) => {
+    async (
+      currentSession: ChatSession,
+      options?: { fromPhotoRequest?: boolean }
+    ) => {
       if (!girlfriend) return;
 
       const systemMsg: ChatMessage = {
@@ -384,11 +393,38 @@ export default function ChatPage() {
         return { ...prev, messages: [...prev.messages, systemMsg] };
       });
 
+      const appendFailureLines = (failHint: string) => {
+        const characterLine = options?.fromPhotoRequest
+          ? getSelfieFailureCharacterLine(girlfriend.id)
+          : null;
+        const failTextId = crypto.randomUUID();
+        setSession((prev) => {
+          if (!prev) return prev;
+          const nextMessages = prev.messages.map((m) =>
+            m.id === systemMsg.id ? { ...m, content: failHint } : m
+          );
+          if (characterLine) {
+            nextMessages.push({
+              id: failTextId,
+              role: "girlfriend",
+              type: "text",
+              content: characterLine,
+              timestamp: Date.now(),
+            });
+          }
+          return { ...prev, messages: nextMessages };
+        });
+        if (characterLine) {
+          generateTTS(characterLine, failTextId, true);
+        }
+      };
+
       try {
-        const variationIndex = Math.floor(
-          Math.random() * girlfriend.selfieVariations.length
-        );
-        const selfiePrompt = `${girlfriend.appearance}, ${girlfriend.selfieVariations[variationIndex]}, selfie style, realistic photo, natural lighting`;
+        const { prompt: selfiePrompt } = buildSelfiePrompt({
+          girlfriendId: girlfriend.id,
+          name: girlfriend.name,
+          appearance: girlfriend.appearance,
+        });
 
         const res = await fetch("/api/generate-selfie", {
           method: "POST",
@@ -430,41 +466,14 @@ export default function ChatPage() {
             typeof data.error === "string" && data.error.includes("保存")
               ? "📸 图片保存失败，稍后再试"
               : "📸 自拍生成失败，稍后再试";
-          setSession((prev) => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              messages: prev.messages.map((m) =>
-                m.id === systemMsg.id
-                  ? { ...m, content: failHint }
-                  : m
-              ),
-            };
-          });
+          appendFailureLines(failHint);
         }
       } catch {
-        setSession((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            messages: prev.messages.map((m) =>
-              m.id === systemMsg.id
-                ? { ...m, content: "📸 自拍生成失败，稍后再试" }
-                : m
-            ),
-          };
-        });
+        appendFailureLines("📸 自拍生成失败，稍后再试");
       }
     },
     [girlfriend, generateTTS]
   );
-
-  // Check if user is requesting a photo
-  const isPhotoRequest = useCallback((text: string): boolean => {
-    const lowerText = text.toLowerCase();
-    const photoKeywords = ["照片", "自拍", "看看你", "发张", "发照片", "发图", "看看你长什么样", "你的照片", "你的自拍", "发个照片", "发个自拍", "给我看", "想看你", "露个脸", "拍张照", "拍个照", "照个相", "发张自拍"];
-    return photoKeywords.some((keyword) => lowerText.includes(keyword));
-  }, []);
 
   const sendMessage = useCallback(async () => {
     if (!inputText.trim() || !girlfriend || !session) return;
@@ -482,7 +491,14 @@ export default function ChatPage() {
     const newIntimacy = Math.min(10, session.intimacy + 0.1);
 
     // Check if user is requesting a photo - every request should trigger selfie
-    const isPhoto = isPhotoRequest(inputText.trim());
+    const userText = inputText.trim();
+    const isPhoto = isPhotoRequest(userText);
+    const isRealityMeta = isPhotoRealityMetaQuestion(userText);
+    const featureContext = isPhoto
+      ? buildSelfiePendingFeatureContext(girlfriend.name)
+      : isRealityMeta
+        ? buildIdentityHonestyFeatureContext()
+        : undefined;
 
     setSession((prev) => {
       if (!prev) return prev;
@@ -514,6 +530,7 @@ export default function ChatPage() {
           messages: conversationHistory,
           systemPrompt: girlfriend.systemPrompt,
           intimacyModifier: getIntimacyModifier(newIntimacy),
+          ...(featureContext ? { featureContext } : {}),
         }),
       });
 
@@ -596,14 +613,21 @@ export default function ChatPage() {
 
       const shouldSelfie = shouldTriggerSelfie(currentSession) || isPhoto;
       if (shouldSelfie) {
-        generateSelfie(currentSession);
+        generateSelfie(currentSession, { fromPhotoRequest: isPhoto });
       }
-    } catch {
+    } catch (error) {
+      const detail =
+        error instanceof Error && error.message
+          ? error.message.replace(/^Error:\s*/, "").slice(0, 60)
+          : "";
       const errorMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "system",
         type: "system",
-        content: "消息发送失败，请重试",
+        content:
+          detail && detail !== "Chat request failed"
+            ? `消息发送失败：${detail}`
+            : "消息发送失败，请重试",
         timestamp: Date.now(),
       };
       setSession((prev) => {
@@ -615,7 +639,7 @@ export default function ChatPage() {
       setIsLoading(false);
       inputRef.current?.focus();
     }
-  }, [inputText, girlfriend, session, generateTTS, generateSelfie, isPhotoRequest]);
+  }, [inputText, girlfriend, session, generateTTS, generateSelfie]);
 
   const playAudio = useCallback((audioUrl: string, messageId: string) => {
     if (playingAudioId === messageId) {

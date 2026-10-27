@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { outboundFetch } from "@/lib/outbound-fetch";
 
 export const maxDuration = 30;
 
@@ -38,10 +39,10 @@ export async function GET(request: NextRequest) {
     url.searchParams.set("deviceId", deviceId);
     url.searchParams.set("girlfriendId", girlfriendId);
 
-    const upstream = await fetch(url.toString(), {
+    const upstream = await outboundFetch(url.toString(), {
       method: "GET",
       headers: storeHeaders(secret),
-      cache: "no-store",
+      retries: 2,
     });
     const data = await upstream.json();
     return NextResponse.json(data, { status: upstream.status });
@@ -64,7 +65,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const { baseUrl, secret } = getStoreConfig();
-    const upstream = await fetch(`${baseUrl}/session`, {
+    const upstream = await outboundFetch(`${baseUrl}/session`, {
       method: "PUT",
       headers: storeHeaders(secret),
       body: JSON.stringify({
@@ -72,6 +73,7 @@ export async function PUT(request: NextRequest) {
         girlfriendId,
         session: body.session,
       }),
+      retries: 2,
     });
     const data = await upstream.json();
     return NextResponse.json(data, { status: upstream.status });

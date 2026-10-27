@@ -4,7 +4,8 @@ import { streamArkChat, type ArkChatMessage } from "@/lib/ark-llm";
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
-  const { messages, systemPrompt, intimacyModifier } = await request.json();
+  const { messages, systemPrompt, intimacyModifier, featureContext } =
+    await request.json();
 
   if (!messages || !systemPrompt) {
     return NextResponse.json(
@@ -13,7 +14,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const fullSystemPrompt = `${systemPrompt}\n\n当前亲密程度：请${intimacyModifier || "温暖亲切地"}回复。`;
+  let fullSystemPrompt = `${systemPrompt}\n\n当前亲密程度：请${intimacyModifier || "温暖亲切地"}回复。`;
+
+  // 本回合应用功能上下文（如自拍生成中），由前端按意图注入，不改写角色人设正文。
+  if (typeof featureContext === "string" && featureContext.trim()) {
+    fullSystemPrompt += `\n\n【本回合应用功能上下文｜优先于模糊猜测】\n${featureContext.trim()}`;
+  }
 
   const allMessages: ArkChatMessage[] = [
     { role: "system", content: fullSystemPrompt },

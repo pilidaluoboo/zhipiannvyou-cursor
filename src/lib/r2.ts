@@ -5,6 +5,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "crypto";
+import { outboundFetch } from "@/lib/outbound-fetch";
 
 const ALLOWED_PREFIXES = ["selfies/", "avatars/"] as const;
 
@@ -140,7 +141,8 @@ export async function downloadImageBytes(
 
   let response: Response;
   try {
-    response = await fetch(sourceUrl);
+    // Must use proxy-aware fetch: Ark temp URLs are on *.volces.com
+    response = await outboundFetch(sourceUrl, { method: "GET", retries: 3 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "网络错误";
     throw new Error(`下载生成图片失败: ${message}`);

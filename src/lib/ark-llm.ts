@@ -1,6 +1,7 @@
 import { setDefaultResultOrder } from "dns";
 import { formatFetchError } from "@/lib/ark-errors";
 import { arkRequestHeaders } from "@/lib/ark-fetch";
+import { outboundFetch } from "@/lib/outbound-fetch";
 
 // 部分云厂商 IPv6 解析会导致访问国内方舟失败
 try {
@@ -58,7 +59,7 @@ export async function* streamArkChat(options: {
 
   let response: Response;
   try {
-    response = await fetch(`${baseUrl}/chat/completions`, {
+    response = await outboundFetch(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers: arkRequestHeaders(apiKey),
       body: JSON.stringify({
@@ -67,6 +68,8 @@ export async function* streamArkChat(options: {
         temperature: options.temperature ?? 0.85,
         stream: true,
       }),
+      // Streaming chat: do not silently retry a half-open stream.
+      retries: 0,
     });
   } catch (error) {
     throw new Error(formatFetchError("文字模型", error));
